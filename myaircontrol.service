@@ -1,0 +1,15 @@
+[Unit]
+Description=MyAir Control
+After=network.target
+
+[Service]
+User=pi
+Type=simple
+TimeoutStopSec=10
+ExecStart=/usr/local/bin/myair/myaircontrol.py
+Restart=on-success
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+
