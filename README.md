@@ -1,4 +1,8 @@
-# python-flask-myair2-api-translate| 
+# python-flask-myair2-api-translate 
+
+## Things to note
+
+Update the settings in myaircontrol.service to match your system 
 
 ## MyAirControl API
 
