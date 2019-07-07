@@ -28,7 +28,7 @@ SOFTWARE.
 """
 
 __author__ = "Jason Smith"
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 __license__ = "MIT"
 
 import os
