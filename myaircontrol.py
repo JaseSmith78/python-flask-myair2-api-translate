@@ -109,6 +109,26 @@ def create_app(config=None):
         rettext = rettext.replace("{2}", b[int(zone)])
         rettext = rettext.replace("{3}", c[int(zone)])
         return rettext
+    
+    @app.route("/getZones")
+    def getZones():
+        logger.info("getZones")
+        (a,b,c) = myair_zonestatus()
+        rettext = "| name | open | percent | \n"
+        rettext = rettext + "| --- | :---: | :---: | \n"
+        for i in range(1, len(a)):
+            rettext = rettext + "| " + a[i] + " | " + str(b[i]) + " | " + str(c[i]) + " | \n"
+        return markdown.markdown(rettext, extensions=['tables'])
+    
+    @app.route("/api/getZones")
+    def getZonesAPI():
+        logger.info("getZonesAPI")
+        (a,b,c) = myair_zonestatus()
+        rettext = "name | open | percent \n"
+        for i in range(1, len(a)):
+            rettext = rettext + a[i] + " | " + str(b[i]) + " | " + str(c[i]) + "\n"
+        return rettext
+
         
     @app.route("/api/setZone/<zone>/<action>/<value>")
     def setZone(zone, action, value):
