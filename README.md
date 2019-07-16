@@ -1,5 +1,7 @@
 # python-flask-myair2-api-translate 
 
+For use with AdvancedAir MyAir version 2
+
 ## Things to note
 
 Update the settings in myaircontrol.service to match your system 
