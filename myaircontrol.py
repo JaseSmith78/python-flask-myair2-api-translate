@@ -37,9 +37,11 @@ import urllib.request
 import xml.etree.ElementTree as ET
 import logzero
 import markdown
+import random
 from flask import Flask, jsonify
 from flask_cors import CORS
 from logzero import logger
+from time import sleep
 
 def create_app(config=None):
     app = Flask(__name__)
@@ -67,27 +69,28 @@ def create_app(config=None):
     @app.route("/status")
     def HBThermStatus():
         logger.info("/status")
-        tmp ="{\n"
+        sleep(random.randrange(5,8) * 0.1)
+        statmp ="{\n"
         if myair_status("Running") == "0":
-            tmp = tmp + "\"currentHeatingCoolingState\":0, \n"
-            tmp = tmp + "\"targetHeatingCoolingState\":0, \n"
+            statmp = statmp + "\"currentHeatingCoolingState\":0, \n"
+            statmp = statmp + "\"targetHeatingCoolingState\":0, \n"
         else:
             tmpmode = myair_status("Mode")
             if tmpmode == "H":
-                tmp = tmp + "\"currentHeatingCoolingState\":1, \n"
-                tmp = tmp + "\"targetHeatingCoolingState\":1, \n"
+                statmp = statmp + "\"currentHeatingCoolingState\":1, \n"
+                statmp = statmp + "\"targetHeatingCoolingState\":1, \n"
             if tmpmode == "C":
-                tmp = tmp + "\"currentHeatingCoolingState\":2, \n"
-                tmp = tmp + "\"targetHeatingCoolingState\":2, \n"
+                statmp = statmp + "\"currentHeatingCoolingState\":2, \n"
+                statmp = statmp + "\"targetHeatingCoolingState\":2, \n"
             if tmpmode == "F":
-                tmp = tmp + "\"currentHeatingCoolingState\":2, \n"
-                tmp = tmp + "\"targetHeatingCoolingState\":3, \n"
+                statmp = statmp + "\"currentHeatingCoolingState\":2, \n"
+                statmp = statmp + "\"targetHeatingCoolingState\":3, \n"
         tmptemp = myair_status("ActTemp")
-        tmp = tmp + "\"currentTemperature\":" + tmptemp + ", \n"
+        statmp = statmp + "\"currentTemperature\":" + tmptemp + ", \n"
         tmptemp = myair_status("SetTemp")
-        tmp = tmp + "\"targetTemperature\":" + tmptemp + " \n }"
-        logger.info("returning json: %s", tmp)
-        return tmp
+        statmp = statmp + "\"targetTemperature\":" + tmptemp + " \n }"
+        logger.info("returning json: %s", statmp)
+        return statmp
 
     @app.route("/targetHeatingCoolingState/<mode>")
     def HBThermSetMode(mode):
@@ -98,11 +101,11 @@ def create_app(config=None):
         else:
             tmp = myair_setrun("1")
             if int(mode) == 1:
-                pass
+                tmp = tmp + "\n" + myair_setmode("H")
             if int(mode) == 2:
-                pass
+                tmp = tmp + "\n" + myair_setmode("C") 
             if int(mode) == 3:
-                pass
+                tmp = tmp + "\n" + myair_setmode("F") 
             return tmp
 
     @app.route("/targetTemperature/<temp>")
@@ -184,7 +187,12 @@ def create_app(config=None):
             rettext = rettext + a[i] + " | " + str(b[i]) + " | " + str(c[i]) + "\n"
         return rettext
 
-        
+    @app.route("/api/setMode/<mode>")
+    def setMode(mode):
+        logger.info("/api/setMode/%s", mode)
+        tmp = myair_setmode(mode)
+        return tmp
+
     @app.route("/api/setZone/<zone>/<action>/<value>")
     def setZone(zone, action, value):
         logger.info("setZone/%s/%s/%s", zone, action, value)
@@ -212,7 +220,8 @@ def myair_request(req):
             "getzone":"http://{1}/getZoneData?zone={2}",
             "setzone":"http://{1}/setZoneData?zone={2}",
             "setzoneonoff":"&zoneSetting={3}",
-            "setzonepercent":"&userPercentSetting={4}"
+            "setzonepercent":"&userPercentSetting={4}",
+            "setmode":"http://{1}/setSystemData?mode={2}"
             }
     for each in myairdic:
         myairdic[each] = myairdic[each].replace("{1}",myairaddress)
@@ -313,6 +322,24 @@ def myair_setrun(run):
     myair_login()
     logger.info("so myair set running: %s", run)
     runurl = myair_request("power").replace("{2}", run)
+    logger.info("url: %s", runurl)
+    urlhandle = urllib.request.urlopen(runurl)
+    httpresult = urlhandle.read()
+    logger.debug("returned: %s", httpresult)
+    return "ok"
+
+def myair_setmode(mode):
+    """sets the AC mode, Cooling (1), Heating (2), or Fan (3)"""
+    myair_login()
+    logger.info("do set new mode")
+    modesub = 3
+    if mode == "C":
+        modesub = 1
+    if mode == "H":
+        modesub = 2
+    if mode == "F":
+        modesub = 3
+    runurl = myair_request("setmode").replace("{2}", str(modesub))
     logger.info("url: %s", runurl)
     urlhandle = urllib.request.urlopen(runurl)
     httpresult = urlhandle.read()
