@@ -109,6 +109,13 @@ def create_app(config=None):
         rettext = rettext.replace("{2}", b[int(zone)])
         rettext = rettext.replace("{3}", c[int(zone)])
         return rettext
+
+    @app.route("/api/getZoneOO/<zone>")
+    def getZoneOO(zone):
+        logger.info("getZoneOO/%s", zone)
+        (a,b,c) = myair_zonestatus()
+        rettext = b[int(zone)]
+        return rettext
     
     @app.route("/getZones")
     def getZones():
