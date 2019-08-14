@@ -64,6 +64,54 @@ def create_app(config=None):
             #convert to html from markdown
             return markdown.markdown(contents, extensions=['tables'])
 
+    @app.route("/status")
+    def HBThermStatus():
+        logger.info("/status")
+        tmp ="{\n"
+        if myair_status("Running") == "0":
+            tmp = tmp + "\"currentHeatingCoolingState\":0, \n"
+            tmp = tmp + "\"targetHeatingCoolingState\":0, \n"
+        else:
+            tmpmode = myair_status("Mode")
+            if tmpmode == "H":
+                tmp = tmp + "\"currentHeatingCoolingState\":1, \n"
+                tmp = tmp + "\"targetHeatingCoolingState\":1, \n"
+            if tmpmode == "C":
+                tmp = tmp + "\"currentHeatingCoolingState\":2, \n"
+                tmp = tmp + "\"targetHeatingCoolingState\":2, \n"
+            if tmpmode == "F":
+                tmp = tmp + "\"currentHeatingCoolingState\":2, \n"
+                tmp = tmp + "\"targetHeatingCoolingState\":3, \n"
+        tmptemp = myair_status("ActTemp")
+        tmp = tmp + "\"currentTemperature\":" + tmptemp + ", \n"
+        tmptemp = myair_status("SetTemp")
+        tmp = tmp + "\"targetTemperature\":" + tmptemp + " \n }"
+        logger.info("returning json: %s", tmp)
+        return tmp
+
+    @app.route("/targetHeatingCoolingState/<mode>")
+    def HBThermSetMode(mode):
+        logger.info("targetHeatingCoolingState/%s", mode)
+        if int(mode) == 0:
+            tmp = myair_setrun("0")
+            return tmp
+        else:
+            tmp = myair_setrun("1")
+            if int(mode) == 1:
+                pass
+            if int(mode) == 2:
+                pass
+            if int(mode) == 3:
+                pass
+            return tmp
+
+    @app.route("/targetTemperature/<temp>")
+    def HBThermSetTemp(temp):
+        logger.info("/targetTemperature/%s", temp)
+        tmp = myair_settemp(temp)
+        return tmp
+
+
     @app.route("/api/getSetTemp")
     def getSetTemp():
         logger.info("getSetTemp")
@@ -86,8 +134,8 @@ def create_app(config=None):
     def getMode():
         logger.info("getMode")
         tmp = myair_status("Mode")
-        return tmp   
-        
+        return tmp 
+
     @app.route("/api/getRunning")
     def getRunning():
         logger.info("getRunning")
@@ -159,7 +207,7 @@ def myair_request(req):
     myairdic = {
             "login":"http://{1}/login?password=password",
             "status":"http://{1}/getSystemData",
-            "power":"http://{1}/setSystemdata?airconOnOff={2}",
+            "power":"http://{1}/setSystemData?airconOnOff={2}",
             "settemp":"http://{1}/setSystemData?centralDesiredTemp={2}",
             "getzone":"http://{1}/getZoneData?zone={2}",
             "setzone":"http://{1}/setZoneData?zone={2}",
@@ -266,9 +314,9 @@ def myair_setrun(run):
     logger.info("so myair set running: %s", run)
     runurl = myair_request("power").replace("{2}", run)
     logger.info("url: %s", runurl)
-    urlhandle = liburlrequest.urlopen(runurl)
+    urlhandle = urllib.request.urlopen(runurl)
     httpresult = urlhandle.read()
-    logger.debug("returned: %s", httpsresult)
+    logger.debug("returned: %s", httpresult)
     return "ok"
     
 def myair_settemp(temp):
