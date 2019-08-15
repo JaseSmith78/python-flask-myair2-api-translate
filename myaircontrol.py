@@ -69,26 +69,25 @@ def create_app(config=None):
     @app.route("/status")
     def HBThermStatus():
         logger.info("/status")
-        sleep(random.randrange(5,8) * 0.1)
-        statmp ="{\n"
+        statmp ="{"
         if myair_status("Running") == "0":
-            statmp = statmp + "\"currentHeatingCoolingState\":0, \n"
-            statmp = statmp + "\"targetHeatingCoolingState\":0, \n"
+            statmp = statmp + "\"currentHeatingCoolingState\":0, "
+            statmp = statmp + "\"targetHeatingCoolingState\":0, "
         else:
             tmpmode = myair_status("Mode")
             if tmpmode == "H":
-                statmp = statmp + "\"currentHeatingCoolingState\":1, \n"
-                statmp = statmp + "\"targetHeatingCoolingState\":1, \n"
+                statmp = statmp + "\"currentHeatingCoolingState\":1, "
+                statmp = statmp + "\"targetHeatingCoolingState\":1, "
             if tmpmode == "C":
-                statmp = statmp + "\"currentHeatingCoolingState\":2, \n"
-                statmp = statmp + "\"targetHeatingCoolingState\":2, \n"
+                statmp = statmp + "\"currentHeatingCoolingState\":2, "
+                statmp = statmp + "\"targetHeatingCoolingState\":2, "
             if tmpmode == "F":
-                statmp = statmp + "\"currentHeatingCoolingState\":2, \n"
-                statmp = statmp + "\"targetHeatingCoolingState\":3, \n"
+                statmp = statmp + "\"currentHeatingCoolingState\":2, "
+                statmp = statmp + "\"targetHeatingCoolingState\":3, "
         tmptemp = myair_status("ActTemp")
-        statmp = statmp + "\"currentTemperature\":" + tmptemp + ", \n"
+        statmp = statmp + "\"currentTemperature\":" + tmptemp + ", "
         tmptemp = myair_status("SetTemp")
-        statmp = statmp + "\"targetTemperature\":" + tmptemp + " \n }"
+        statmp = statmp + "\"targetTemperature\":" + tmptemp + " }"
         logger.info("returning json: %s", statmp)
         return statmp
 
