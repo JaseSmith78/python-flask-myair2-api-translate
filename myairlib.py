@@ -38,6 +38,7 @@ import xml.etree.ElementTree as ET
 import logzero
 from logzero import logger
 from time import sleep,time
+import json
 
 
 class myair:
@@ -125,6 +126,11 @@ class myair:
     def getActualTemp(self):
         updateData()
         return self.tempActual
+
+    def getZone(zone):
+        updateData()
+        retval = json.JSONEncoder().encode({OnOff: self.zoneOnOff[zone], Percent: self.zonePercent[zone], Name: self.zoneName[zone]})
+        return(retval)
 
     def myair_setzone(zone, onoff=-1, percent=-1):
         """sets zone params"""
