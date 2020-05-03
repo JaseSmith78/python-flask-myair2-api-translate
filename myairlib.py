@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-    myair v2 control
+    myair v2 control 
 
 MIT License
 
@@ -46,6 +46,7 @@ from time import sleep
 
 class myair:
     def __init__(self, address):
+        """ Setup class variables """
         self.controlUnit = address
         self.updateTime = time() 
         self.refreshIntival = 5
@@ -56,6 +57,28 @@ class myair:
         self.power = 0
         self.tempActual = 21
         self.tempSet = 21
+        """ Set to IP or hostname of myair controler """
+        self.urldic = {
+                "login":"http://{1}/login?password=password",
+                "status":"http://{1}/getSystemData",
+                "power":"http://{1}/setSystemData?airconOnOff={2}",
+                "settemp":"http://{1}/setSystemData?centralDesiredTemp={2}",
+                "getzone":"http://{1}/getZoneData?zone={2}",
+                "setzone":"http://{1}/setZoneData?zone={2}",
+                "setzoneonoff":"&zoneSetting={3}",
+                "setzonepercent":"&userPercentSetting={4}",
+                "setmode":"http://{1}/setSystemData?mode={2}"
+                }
+        for each in self.urldic:
+            self.urldic[each] = self.urldic[each].replace("{1}",self.controlUnit)
+ 
+
+    def myair_login():
+        """myair login"""
+        logger.info("do myair login, url: %s", self.urldic("login"))
+        x = urllib.request.urlopen(self.urldic("login"))
+        httpreturn = x.read()
+        logger.debug("returned: %s", httpreturn)
 
     def getStatus(self):
         return sata
@@ -78,6 +101,7 @@ class myair:
         if time() > self.updateTime + self.refreshInterval:
             pass
 
+#--------------------------------------------------------------------------------------------------------------
 
 def create_app(config=None):
     app = Flask(__name__)
@@ -244,30 +268,9 @@ def create_app(config=None):
         
     return app
 
-def myair_request(req):
-    """ Set to IP or hostname of myair controler """
-    myairaddress = "ac.home.internal"
-    myairdic = {
-            "login":"http://{1}/login?password=password",
-            "status":"http://{1}/getSystemData",
-            "power":"http://{1}/setSystemData?airconOnOff={2}",
-            "settemp":"http://{1}/setSystemData?centralDesiredTemp={2}",
-            "getzone":"http://{1}/getZoneData?zone={2}",
-            "setzone":"http://{1}/setZoneData?zone={2}",
-            "setzoneonoff":"&zoneSetting={3}",
-            "setzonepercent":"&userPercentSetting={4}",
-            "setmode":"http://{1}/setSystemData?mode={2}"
-            }
-    for each in myairdic:
-        myairdic[each] = myairdic[each].replace("{1}",myairaddress)
-    return myairdic[req]
+
      
-def myair_login():
-    """myair login"""       
-    logger.info("do myair login, url: %s", myair_request("login"))
-    x = urllib.request.urlopen(myair_request("login"))
-    httpreturn = x.read()
-    logger.debug("returned: %s", httpreturn)
+
     
 def myair_status(req):
     myair_login()
