@@ -43,6 +43,42 @@ from flask_cors import CORS
 from logzero import logger
 from time import sleep
 
+
+class myair:
+    def __init__(self, address):
+        self.controlUnit = address
+        self.updateTime = time() 
+        self.refreshIntival = 5
+        self.zoneOnOff = []
+        self.zoneName = []
+        self.zonePercent = []
+        self.mode = 0
+        self.power = 0
+        self.tempActual = 21
+        self.tempSet = 21
+
+    def getStatus(self):
+        return sata
+
+    def setStatus(self, mode):
+        pass
+
+    def setStatus(self, power):
+        pass
+
+    def getSetTemp(self):
+        updateData()
+        return self.tempSet
+   
+    def getActualTemp(self):
+        updateData()
+        return self.tempActual
+
+    def updateData():
+        if time() > self.updateTime + self.refreshInterval:
+            pass
+
+
 def create_app(config=None):
     app = Flask(__name__)
 
