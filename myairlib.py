@@ -36,34 +36,30 @@ import argparse
 import urllib.request
 import xml.etree.ElementTree as ET
 import logzero
-import markdown
-import random
-from flask import Flask, jsonify
-from flask_cors import CORS
 from logzero import logger
-from time import sleep
+from time import sleep,time
 
 
 class myair:
     def __init__(self, address):
         """ Setup class variables """
         self.controlUnit = address
-        self.updateTime = time() 
+        self.updateTime = (time.time() - 5 )
         self.refreshIntival = 5
-        self.zoneOnOff = []
-        self.zoneName = []
-        self.zonePercent = []
-        self.mode = 0
-        self.power = 0
-        self.tempActual = 21
-        self.tempSet = 21
+        self.zoneOnOff = [0,0,0,0,0,0,0,0,0]
+        self.zoneName = ["","","","","","","","",""]
+        self.zonePercent = [0,0,0,0,0,0,0,0,0]
+        self.mode = 'C'
+        self.power = '0'
+        self.tempActual = '21'
+        self.tempSet = '21'
         """ Set to IP or hostname of myair controler """
         self.urldic = {
                 "login":"http://{1}/login?password=password",
                 "status":"http://{1}/getSystemData",
                 "power":"http://{1}/setSystemData?airconOnOff={2}",
                 "settemp":"http://{1}/setSystemData?centralDesiredTemp={2}",
-                "getzone":"http://{1}/getZoneData?zone={2}",
+                "getzone":"http://{1}/getZoneData?zone=all",
                 "setzone":"http://{1}/setZoneData?zone={2}",
                 "setzoneonoff":"&zoneSetting={3}",
                 "setzonepercent":"&userPercentSetting={4}",
@@ -71,15 +67,48 @@ class myair:
                 }
         for each in self.urldic:
             self.urldic[each] = self.urldic[each].replace("{1}",self.controlUnit)
- 
 
-    def myair_login():
+    def login():
         """myair login"""
         logger.info("do myair login, url: %s", self.urldic("login"))
         x = urllib.request.urlopen(self.urldic("login"))
         httpreturn = x.read()
         logger.debug("returned: %s", httpreturn)
 
+    def updateData():
+        if time.time() > self.updateTime + self.refreshInterval:
+            login()
+            """ start the get status process """
+            logger.info("do myair status, url: %s",  self.urldic("status"))
+            urlhandle = urllib.request.urlopen(self.urldic("status"))
+            httpresult = urlhandle.read()
+            logger.debug("returned: %s", httpresult)
+            y = ET.fromstring(httpresult)
+            for z in y.findall('system'):
+                for system in z.findall('unitcontrol'):
+                    self.power = system.findtext('airconOnOff')
+                    self.tempActual = system.findtext('centralActualTemp')
+                    self.tempSet = system.findtext('centralDesiredTemp')
+                    d = system.findtext('mode')
+                    if d == "1":
+                        self.mode = "C"
+                    if d == "2":
+                        self.mode = "H"
+                    if d == "3":
+                        self.mode = "F"
+            """ Update the zome status """
+            logger.info("do myair zone status")
+            logger.info(" url: %s", self.urldic("getzone"))
+            urlhandle = urllib.request.urlopen(self.urldic("getzone"))
+            httpresult = urlhandle.read()
+            logger.debug("returned: %s", httpresult)
+            x = ET.fromstring(httpresult)
+            for ZoneNumber in range(1,9):
+                for system in x.findall('zone'+str(ZoneNumber)):
+                    self.zoneOnOff[ZoneNumber] = system.findtext('setting')
+                    self.zonePercent[ZoneNumber] = system.findtext('userPercentSetting')
+                    self.zoneName[ZoneNumber] = system.findtext('name')
+    
     def getStatus(self):
         return sata
 
@@ -97,9 +126,64 @@ class myair:
         updateData()
         return self.tempActual
 
-    def updateData():
-        if time() > self.updateTime + self.refreshInterval:
-            pass
+    def myair_setzone(zone, onoff=-1, percent=-1):
+        """sets zone params"""
+        myair_login()
+        logger.info("do myair set zone onoff: %s, percent: %s", onoff, percent)
+        url = myair_request("setzone").replace("{2}",str(zone))
+        logger.info("url: %s", url)
+        if int(onoff) > -1:
+            logger.debug("onoff")
+            url = url + myair_request("setzoneonoff").replace("{3}",str(onoff))
+        if int(percent) > -1:
+            logger.debug("percent")
+            url = url + myair_request("setzonepercent").replace("{4}",str(percent))
+        logger.info("url: %s", url)
+        urlhandle = urllib.request.urlopen(url)
+        http = urlhandle.read()
+        logger.debug("returned: %s", http)
+        return "ok"
+        
+    def myair_setrun(run):
+        """sets the AC on or off"""
+        myair_login()
+        logger.info("so myair set running: %s", run)
+        runurl = myair_request("power").replace("{2}", run)
+        logger.info("url: %s", runurl)
+        urlhandle = urllib.request.urlopen(runurl)
+        httpresult = urlhandle.read()
+        logger.debug("returned: %s", httpresult)
+        return "ok"
+
+    def myair_setmode(mode):
+        """sets the AC mode, Cooling (1), Heating (2), or Fan (3)"""
+        myair_login()
+        logger.info("do set new mode")
+        modesub = 3
+        if mode == "C":
+            modesub = 1
+        if mode == "H":
+            modesub = 2
+        if mode == "F":
+            modesub = 3
+        runurl = myair_request("setmode").replace("{2}", str(modesub))
+        logger.info("url: %s", runurl)
+        urlhandle = urllib.request.urlopen(runurl)
+        httpresult = urlhandle.read()
+        logger.debug("returned: %s", httpresult)
+        return "ok"
+        
+    def myair_settemp(temp):
+        """ sets desired temp"""
+        myair_login()
+        logger.info("do myair set temp: %s", temp)
+        tempurl = myair_request("settemp").replace("{2}", temp)
+        logger.info("url: %s", tempurl)
+        urlhandle = urllib.request.urlopen(tempurl)
+        httpresult = urlhandle.read()
+        logger.debug("returned: %s", httpresult)
+        return "ok"
+
 
 #--------------------------------------------------------------------------------------------------------------
 
@@ -272,128 +356,8 @@ def create_app(config=None):
      
 
     
-def myair_status(req):
-    myair_login()
-    logger.info("do myair status, type: %s, url: %s", req, myair_request("status"))
-    urlhandle = urllib.request.urlopen(myair_request("status"))
-    httpresult = urlhandle.read()
-    logger.debug("returned: %s", httpresult)
-    y = ET.fromstring(httpresult)
-    
-    Running = 0
-    TempActual = 0.0
-    TempSetpoint = 0.0
-    Mode = "X"
 
-    for z in y.findall('system'):
-        for system in z.findall('unitcontrol'):
-            Running = system.findtext('airconOnOff')
-            TempActual = system.findtext('centralActualTemp')
-            TempSetpoint = system.findtext('centralDesiredTemp')
-            d = system.findtext('mode')
-            if d == "1":
-                Mode = "C"
-            if d == "2":
-                Mode = "H"
-            if d == "3":
-                Mode = "F"
-    retval = ""        
-    if req.upper() == "ACTTEMP":
-        retval = str(TempActual)
-    elif req.upper() == "SETTEMP":
-        retval = str(TempSetpoint)
-    elif req.upper() == "RUNNING":
-        retval = str(Running)
-    elif req.upper() == "MODE":
-        retval = str(Mode)
-    else:
-        retval = "0"
-    logger.info("returning status: %s", retval)
-    return retval
     
-def myair_zonestatus():
-    """
-    Returns name, open, percent
-    as arrays
-    """
-    myair_login()
-    logger.info("do myair zone status")
-    zoneurl = myair_request("getzone")
-    zoneurl = zoneurl.replace("{2}","all")
-    logger.info(" url: %s", zoneurl)
-    
-    zname = ["","","","","","","","",""]
-    zopen = [0,0,0,0,0,0,0,0,0]
-    zpercent = [0,0,0,0,0,0,0,0,0]
-    
-    urlhandle = urllib.request.urlopen(zoneurl)
-    httpresult = urlhandle.read()
-    logger.debug("returned: %s", httpresult)
-    x = ET.fromstring(httpresult)
-    for ZoneNumber in range(1,9):
-        for system in x.findall('zone'+str(ZoneNumber)):
-            zopen[ZoneNumber] = system.findtext('setting')
-            zpercent[ZoneNumber] = system.findtext('userPercentSetting')
-            zname[ZoneNumber] = system.findtext('name')
-    return (zname,zopen,zpercent)
-    
-def myair_setzone(zone, onoff=-1, percent=-1):
-    """sets zone params"""
-    myair_login()
-    logger.info("do myair set zone onoff: %s, percent: %s", onoff, percent)
-    url = myair_request("setzone").replace("{2}",str(zone))
-    logger.info("url: %s", url)
-    if int(onoff) > -1:
-        logger.debug("onoff")
-        url = url + myair_request("setzoneonoff").replace("{3}",str(onoff))
-    if int(percent) > -1:
-        logger.debug("percent")
-        url = url + myair_request("setzonepercent").replace("{4}",str(percent))
-    logger.info("url: %s", url)
-    urlhandle = urllib.request.urlopen(url)
-    http = urlhandle.read()
-    logger.debug("returned: %s", http)
-    return "ok"
-    
-def myair_setrun(run):
-    """sets the AC on or off"""
-    myair_login()
-    logger.info("so myair set running: %s", run)
-    runurl = myair_request("power").replace("{2}", run)
-    logger.info("url: %s", runurl)
-    urlhandle = urllib.request.urlopen(runurl)
-    httpresult = urlhandle.read()
-    logger.debug("returned: %s", httpresult)
-    return "ok"
-
-def myair_setmode(mode):
-    """sets the AC mode, Cooling (1), Heating (2), or Fan (3)"""
-    myair_login()
-    logger.info("do set new mode")
-    modesub = 3
-    if mode == "C":
-        modesub = 1
-    if mode == "H":
-        modesub = 2
-    if mode == "F":
-        modesub = 3
-    runurl = myair_request("setmode").replace("{2}", str(modesub))
-    logger.info("url: %s", runurl)
-    urlhandle = urllib.request.urlopen(runurl)
-    httpresult = urlhandle.read()
-    logger.debug("returned: %s", httpresult)
-    return "ok"
-    
-def myair_settemp(temp):
-    """ sets desired temp"""
-    myair_login()
-    logger.info("do myair set temp: %s", temp)
-    tempurl = myair_request("settemp").replace("{2}", temp)
-    logger.info("url: %s", tempurl)
-    urlhandle = urllib.request.urlopen(tempurl)
-    httpresult = urlhandle.read()
-    logger.debug("returned: %s", httpresult)
-    return "ok"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
